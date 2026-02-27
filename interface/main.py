@@ -107,7 +107,6 @@ with aba2:
             st.rerun()
     else:
         st.info("Cadastre uma matéria primeiro")
-        st.rerun()
 
 #=========================
 #Relatorios
