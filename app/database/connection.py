@@ -35,6 +35,7 @@ def create_tables():
     CREATE TABLE IF NOT EXISTS materias (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT NOT NULL,
+        usuario_id INTEGER NOT NULL,
         carga_total REAL NOT NULL CHECK (carga_total > 0),
         aulas_por_semana INTEGER NOT NULL CHECK (aulas_por_semana > 0),
         horas_por_aula INTEGER NOT NULL CHECK (horas_por_aula BETWEEN 1 AND 4),
@@ -46,12 +47,35 @@ def create_tables():
     CREATE TABLE IF NOT EXISTS aulas(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         materia_id INTEGER NOT NULL,
+        usuario_id INTEGER NOT NULL,
         data TEXT NOT NULL,
         horas INTEGER NOT NULL CHECK (horas BETWEEN 1 and 4),
         presente INTEGER NOT NULL CHECK (presente IN (0,1)),
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (materia_id) REFERENCES materias(id))
+        FOREIGN KEY (materia_id) REFERENCES materias(id) ON DELETE CASCADE)
         """)
+    
+    cursor.execute(
+        """
+    CREATE TABLE IF NOT EXISTS Usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            senha_hash TEXT NOT NULL,
+            dt_criacao TEXT NOT NULL
+        )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS semestre (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER NOT NULL,
+    data_inicio TEXT NOT NULL,
+    data_fim TEXT NOT NULL,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+    );
+    """)
+    
     """Bloquear a exclusão da matéria se existirem aulas vinculadas."""
     conn.commit()
     conn.close()

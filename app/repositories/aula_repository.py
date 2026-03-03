@@ -1,38 +1,63 @@
+import sqlite3
 from app.models.aula import Aula
 
 
 class AulaRepository:
 
-    def __init__(self, conn):
-        self.conn = conn
+    def __init__(self, db_path: str):
+        self.db_path = db_path
 
     # CREATE
-    def inserir(self, materia_id: int, data: str, horas: int, presente: int) -> None:
-        cursor = self.conn.cursor()
+    def inserir(self, usuario_id: int, materia_id: int, data: str, horas: int, presente: int) -> None:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO aulas (usuario_id, materia_id, data, horas, presente)
+                VALUES (?, ?, ?, ?, ?)
+            """, (usuario_id, materia_id, data, horas, presente))
+            conn.commit()
 
-        cursor.execute("""
-            INSERT INTO aulas (materia_id, data, horas, presente)
-            VALUES (?, ?, ?, ?)
-        """, (materia_id, data, horas, presente))
+    # SOMA HORAS
+    def somar_horas(self, usuario_id: int, materia_id: int) -> int:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT SUM(horas)
+                FROM aulas
+                WHERE usuario_id = ? AND materia_id = ?
+            """, (usuario_id, materia_id))
+            result = cursor.fetchone()
+            return result[0] if result[0] else 0
 
-        self.conn.commit()
+    # READ
+    def listar_por_materia(self, usuario_id: int, materia_id: int) -> list[Aula]:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT id, usuario_id, materia_id, data, horas, presente, created_at
+                FROM aulas
+                WHERE materia_id = ?
+                AND usuario_id = ?
+                ORDER BY data ASC
+            """, (materia_id, usuario_id))
+            rows = cursor.fetchall()
 
-    # READ ALL BY MATERIA
-    def listar_por_materia(self, materia_id: int) -> list[Aula]:
-        cursor = self.conn.cursor()
-
-        cursor.execute("""
-            SELECT * FROM aulas
-            WHERE materia_id = ?
-            ORDER BY data ASC
-        """, (materia_id,))
-
-        rows = cursor.fetchall()
-
-        return [Aula(*row) for row in rows]
+        return [
+            Aula(
+                usuario_id=row[1],
+                materia_id=row[2],
+                data=row[3],
+                horas=int(row[4]),
+                presente=row[5],
+                id=row[0],
+                created_at=row[6]
+            )
+            for row in rows
+        ]
 
     # DELETE
-    def deletar(self, aula_id: int) -> None:
-        cursor = self.conn.cursor()
-        cursor.execute("DELETE FROM aulas WHERE id = ?", (aula_id,))
-        self.conn.commit()
+    def deletar_por_materia(self, materia_id: int) -> None:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM aulas WHERE materia_id = ?", (materia_id,))
+            conn.commit()
