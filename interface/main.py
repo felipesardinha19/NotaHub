@@ -191,9 +191,9 @@ def render_app(materia_repo, aula_repo, frequencia_service,
                 st.session_state["materia_cadastrada"] = True
                 st.rerun()
 
-    # =========================================================
-    # 📝 ABA 2 - REGISTRAR AULA
-    # =========================================================
+# =========================================================
+# 📝 ABA 2 - REGISTRAR AULA (REFATORADO)
+# =========================================================
     with abas[1]:
         st.header("Registrar Aula")
 
@@ -206,50 +206,55 @@ def render_app(materia_repo, aula_repo, frequencia_service,
         if not materias:
             st.info("Cadastre uma matéria primeiro.")
         else:
-            with st.form("form_aula", clear_on_submit=True):
-                # ------------------ SELEÇÃO DE MATÉRIA ------------------
-                materia_sel_index = st.selectbox(
-                    "Selecione a Matéria",
-                    range(len(materias)),
-                    format_func=lambda i: materias[i].nome,
-                    key="materia_sel_index"
+            # 🔥 Seleção mais segura (sem índice)
+            materia_sel = st.selectbox(
+                "Selecione a Matéria",
+                materias,
+                format_func=lambda m: m.nome
+            )
+
+            # 🔥 Cálculo isolado por matéria
+            status = frequencia_service.calcular(materia_sel.id, usuario_id)
+
+            restante_para_carga = max(
+                (materia_sel.carga_total or 0) - status["horas_totais"], 0
+            )
+
+            # 🔒 BLOQUEIO FORA DO FORM (ESSENCIAL)
+            if restante_para_carga <= 0:
+                st.warning(
+                    f"Você já registrou todas as horas da matéria {materia_sel.nome} "
+                    f"({materia_sel.carga_total}h)."
                 )
-                materia_sel = materias[materia_sel_index]
+            else:
+                # ✅ FORM SÓ EXISTE SE PODE REGISTRAR
+                with st.form("form_aula", clear_on_submit=True):
 
-                # ------------------ CALCULO DE FREQUÊNCIA ------------------
-                freq_service = FrequenciaService(materia_repo, aula_repo)
-                status = freq_service.calcular(materia_sel.id, usuario_id)
+                    data = st.date_input("Data")
 
-                restante_para_carga = max((materia_sel.carga_total or 0) - status["horas_totais"], 0)
-
-                aviso_area = st.empty()
-                if restante_para_carga <= 0:
-                    aviso_area.warning(
-                        f"Você já registrou todas as horas da matéria {materia_sel.nome} ({materia_sel.carga_total}h)."
-                    )
-                    st.form_submit_button("Registro Bloqueado", disabled=True)
-                else:
-                    data = st.date_input("Data", key="data_aula")
                     max_horas = min(4, int(restante_para_carga))
+
                     horas = st.number_input(
                         "Horas",
                         min_value=1,
                         max_value=max_horas,
-                        step=1,
-                        key="horas_aula"
+                        step=1
                     )
+
                     status_aula = st.radio(
                         "Status",
                         ["Presente", "Ausente"],
-                        horizontal=True,
-                        key="status_aula"
+                        horizontal=True
                     )
 
                     submitted = st.form_submit_button("Registrar")
+
                     if submitted:
-                        # Recalcula antes de inserir
-                        status = freq_service.calcular(materia_sel.id, usuario_id)
-                        restante_para_carga = max((materia_sel.carga_total or 0) - status["horas_totais"], 0)
+                        # 🔁 Revalidação (boa prática)
+                        status = frequencia_service.calcular(materia_sel.id, usuario_id)
+                        restante_para_carga = max(
+                            (materia_sel.carga_total or 0) - status["horas_totais"], 0
+                        )
 
                         if restante_para_carga <= 0:
                             st.error("Essa matéria já atingiu a carga total.")
@@ -295,7 +300,7 @@ def render_app(materia_repo, aula_repo, frequencia_service,
                     st.error(status)
                 elif "risco" in status.lower():
                     st.warning(status)
-                elif status == "Ok":
+                elif status == "OK":
                     st.success(status)
                 else:
                     st.info(status)

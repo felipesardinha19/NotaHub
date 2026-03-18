@@ -29,6 +29,6 @@ class StatusService:
 
         # 🟢 Semestre terminou, avalia aprovação final
         if frequencia >= 75:
-            return "Ok"
+            return "OK"
         else:
             return "Reprovado"
