@@ -162,7 +162,8 @@ def render_app(materia_repo, aula_repo, frequencia_service,
         "📝 Registrar Aula",
         "📊 Relatórios",
         "📃 Listagem",
-        "⚙️ Configurações"
+        "⚙️ Configurações",
+        "🗂 Semestres"
     ])
 
     # =========================================================
@@ -396,6 +397,14 @@ def render_app(materia_repo, aula_repo, frequencia_service,
             materia_repo,
             frequencia_service
         )
+# =========================================================
+# ⚙️ ABA 6 - Semestre
+# =========================================================
+    with abas[5]:  # índice 5 = nova aba
+        st.header("📂 Histórico de Semestres")
+
+        st.warning("Aguarde nova atualização")
+
 # =========================
 # MAIN
 # =========================
