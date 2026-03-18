@@ -66,12 +66,22 @@ class AulaRepository:
                 SELECT id, usuario_id, materia_id, semestre_id, data, horas, presente
                 FROM aulas
                 WHERE usuario_id = ? AND semestre_id = ?
-                ORDER BY data DESC
+                ORDER BY id DESC
             """, (usuario_id, semestre_id))
             rows = cursor.fetchall()
-
-        return [Aula(*r) for r in rows]
-
+        
+        return [
+            Aula(
+                id=r[0],
+                usuario_id=r[1],
+                materia_id=r[2],
+                semestre_id=r[3],
+                data=r[4],
+                horas=r[5],
+                presente=r[6]
+            )
+            for r in rows
+        ]
     # DELETE
     def deletar_por_materia(self, materia_id: int) -> None:
         with sqlite3.connect(self.db_path) as conn:
