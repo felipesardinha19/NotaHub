@@ -244,7 +244,6 @@ def render_app(materia_repo, aula_repo, frequencia_service,
 
                     # 🔥 Frequência já usa semestre da matéria
                     status = frequencia_service.calcular(materia_sel.id, usuario_id)
-
                     restante_para_carga = max(
                         (materia_sel.carga_total or 0) - status["horas_totais"], 0
                     )
@@ -254,35 +253,24 @@ def render_app(materia_repo, aula_repo, frequencia_service,
                             f"Você já registrou todas as horas da matéria {materia_sel.nome} "
                             f"({materia_sel.carga_total}h)."
                         )
+
                     else:
+                        # =============================
+                        # FORMULARIO PARA NOVA AULA
+                        # =============================
                         with st.form("form_aula", clear_on_submit=True):
-
-                            data = st.date_input("Data")
-
+                            data = st.date_input(
+                                "Data",
+                                max_value=date.today(),  # 🔒 não permite datas futuras
+                            )
                             max_horas = min(4, int(restante_para_carga))
-
-                            horas = st.number_input(
-                                "Horas",
-                                min_value=1,
-                                max_value=max_horas,
-                                step=1
-                            )
-
-                            status_aula = st.radio(
-                                "Status",
-                                ["Presente", "Ausente"],
-                                horizontal=True
-                            )
-
+                            horas = st.number_input("Horas", min_value=1, max_value=max_horas, step=1)
+                            status_aula = st.radio("Status", ["Presente", "Ausente"], horizontal=True)
                             submitted = st.form_submit_button("Registrar")
 
                             if submitted:
-                                # 🔁 Revalidação
                                 status = frequencia_service.calcular(materia_sel.id, usuario_id)
-                                restante_para_carga = max(
-                                    (materia_sel.carga_total or 0) - status["horas_totais"], 0
-                                )
-
+                                restante_para_carga = max((materia_sel.carga_total or 0) - status["horas_totais"], 0)
                                 if restante_para_carga <= 0:
                                     st.error("Essa matéria já atingiu a carga total.")
                                     st.stop()
@@ -290,15 +278,44 @@ def render_app(materia_repo, aula_repo, frequencia_service,
                                 aula_repo.inserir(
                                     usuario_id=usuario_id,
                                     materia_id=materia_sel.id,
-                                    semestre_id=semestre_atual.id,  # 🔥 AQUI
+                                    semestre_id=semestre_atual.id,
                                     data=data,
                                     horas=horas,
                                     presente=1 if status_aula == "Presente" else 0
                                 )
-
                                 st.session_state["aula_registrada"] = True
                                 st.rerun()
-                        
+
+                        # =============================
+                        # HISTÓRICO DE AULAS (últimas 3 lançadas de todas as matérias)
+                        # =============================
+                        st.subheader("Histórico de Aulas (últimos 3 lançamentos)")
+
+                        # Pega todas as aulas do semestre
+                        todas_aulas = aula_repo.listar_por_semestre(usuario_id, semestre_atual.id)
+
+                        # Ordena pelo ID decrescente (últimas inseridas primeiro)
+                        ultimas_aulas = sorted(todas_aulas, key=lambda a: a.id, reverse=True)[:3]
+
+                        if not ultimas_aulas:
+                            st.info("Nenhuma aula registrada ainda.")
+                        else:
+                            for aula in ultimas_aulas:
+                                # Busca a matéria da aula
+                                materia_aula = materia_repo.buscar_por_id(usuario_id, aula.materia_id)
+                                materia_nome = materia_aula.nome if materia_aula else "Desconhecida"
+
+                                col1, col2, col3, col4 = st.columns([2,1,1,2])
+                                with col1:
+                                    st.write(aula.data)
+                                with col2:
+                                    st.write(f"{aula.horas}h")
+                                with col3:
+                                    st.write("Presente" if aula.presente == 1 else "Ausente")
+                                with col4:
+                                    st.write(materia_nome)
+
+                                st.divider()
     # =========================================================
     # 📊 ABA 3 - RELATÓRIOS
     # =========================================================
@@ -315,11 +332,12 @@ def render_app(materia_repo, aula_repo, frequencia_service,
             if not materias:
                 st.info("Nenhuma matéria cadastrada.")
             else:
-                dados = []
+                dados_chart = []
+
                 for materia in materias:
+                    st.subheader(materia.nome)
                     resultado = frequencia_service.calcular(materia.id, usuario_id)
 
-                    st.subheader(materia.nome)
                     st.write(f"Carga Total: {int(materia.carga_total or 0)}h")
                     st.write(f"Frequência: {int(resultado.get('frequencia') or 0)}%")
                     st.write(f"Horas de presença: {int(resultado.get('horas_presentes') or 0)}h")
@@ -334,28 +352,48 @@ def render_app(materia_repo, aula_repo, frequencia_service,
                     elif "risco" in status.lower():
                         st.warning(status)  # amarelo
                     elif "OK" in status:
-                        st.info(status)  # azul, aluno dentro do limite
+                        st.info(status)  # azul
                     elif "Aprovado" in status or "Encerrado" in status:
                         st.success(status)  # verde
                     else:
-                        st.info(status)  # fallback azul neutro
+                        st.info(status)
 
+                    # 🔹 Histórico de aulas - últimos 5 lançamentos
+                    aulas = aula_repo.listar_por_materia(usuario_id, materia.id, semestre_atual.id)
+                    if aulas:
+                        st.markdown("**Histórico de Aulas (últimos 3 lançamentos)**")
+                        # ordena por data decrescente e pega os últimos 5
+                        ultimas_aulas = sorted(aulas, key=lambda a: a.data, reverse=True)[:3]
+
+                        for aula in ultimas_aulas:
+                            presenca_emoji = "✅ Presente" if aula.presente else "❌ Ausente"
+                            col1, col2, col3 = st.columns([3, 2, 1])
+                            with col1:
+                                st.write(aula.data)
+                            with col2:
+                                st.write(f"{aula.horas}h - {presenca_emoji}")
+                            with col3:
+                                # botão de exclusão com key única
+                                if st.button("Excluir", key=f"del_aula_{aula.id}"):
+                                    aula_repo.deletar(aula.id)
+                                    st.rerun()
                     st.divider()
 
-                    dados.append({
+                    # adiciona dados para gráfico
+                    dados_chart.append({
                         "Materia": materia.nome,
                         "Frequencia": resultado["frequencia"]
                     })
 
-                df = pd.DataFrame(dados)
-
-                chart = alt.Chart(df).mark_bar().encode(
-                    x=alt.X("Materia:N", sort=None, axis=alt.Axis(labelAngle=-45)),
-                    y="Frequencia:Q",
-                    tooltip=["Materia", "Frequencia"]
-                )
-
-                st.altair_chart(chart, use_container_width=True)
+                # 🔹 Gráfico de frequência
+                if dados_chart:
+                    df = pd.DataFrame(dados_chart)
+                    chart = alt.Chart(df).mark_bar().encode(
+                        x=alt.X("Materia:N", sort=None, axis=alt.Axis(labelAngle=-45)),
+                        y="Frequencia:Q",
+                        tooltip=["Materia", "Frequencia"]
+                    )
+                    st.altair_chart(chart, use_container_width=True)
 
     # =========================================================
     # 📃 ABA 4 - LISTAGEM

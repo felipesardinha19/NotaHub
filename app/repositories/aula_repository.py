@@ -58,10 +58,29 @@ class AulaRepository:
             )
             for row in rows
         ]
+    
+    def listar_por_semestre(self, usuario_id: int, semestre_id: int) -> list[Aula]:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT id, usuario_id, materia_id, semestre_id, data, horas, presente
+                FROM aulas
+                WHERE usuario_id = ? AND semestre_id = ?
+                ORDER BY data DESC
+            """, (usuario_id, semestre_id))
+            rows = cursor.fetchall()
+
+        return [Aula(*r) for r in rows]
 
     # DELETE
     def deletar_por_materia(self, materia_id: int) -> None:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM aulas WHERE materia_id = ?", (materia_id,))
+            conn.commit()
+
+    def deletar(self, aula_id: int) -> None:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM aulas WHERE id = ?", (aula_id,))
             conn.commit()
