@@ -67,6 +67,10 @@ def render_backup_section(db_path: str, usuario_id: int, materia_repo, frequenci
 # ==========================
 def render_delete_section(materia_repo, usuario_id, db_path: str):
     st.subheader("🗑️ Excluir Matérias")
+    if st.session_state.get("materia_deletada"):
+        st.success("Matéria deletada com sucesso!")
+        del st.session_state["materia_deletada"]
+        
     materias = materia_repo.listar(usuario_id)
 
     if not materias:
@@ -91,7 +95,7 @@ def render_delete_section(materia_repo, usuario_id, db_path: str):
                 # 🗑 Deleta a matéria
                 materia_repo.deletar(materia.id)
 
-                st.success("Matéria excluída! Backup criado automaticamente.")
+                st.session_state["materia_deletada"] = True
                 st.rerun()
 
         st.divider()
@@ -101,6 +105,9 @@ def render_delete_section(materia_repo, usuario_id, db_path: str):
 # ==========================
 def render_semestre_section(semestre_repo, usuario_id):
     st.subheader("📅 Cadastro do Semestre")
+    if st.session_state.get("semestre_salvo"):
+        st.success("Semestre salvo com sucesso!")
+        del st.session_state["semestre_salvo"]
     semestre = semestre_repo.obter_ultimo(usuario_id)
 
     if semestre:
@@ -127,5 +134,5 @@ def render_semestre_section(semestre_repo, usuario_id):
                     data_inicio.strftime("%Y-%m-%d"),
                     data_fim.strftime("%Y-%m-%d")
                 )
-                st.success("Período salvo com sucesso!")
+                st.session_state["semestre_salvo"] = True
                 st.rerun()

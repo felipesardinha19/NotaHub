@@ -15,17 +15,16 @@ class SemestreRepository:
             cursor.execute("""
                 SELECT id 
                 FROM semestre 
-                WHERE usuario_id = ? 
-                AND data_inicio = ? 
-                AND data_fim = ?
-            """, (usuario_id, data_inicio, data_fim))
+                WHERE usuario_id = ?
+                LIMIT 1
+            """, (usuario_id,))
 
             exists = cursor.fetchone()
 
             if exists:
                 cursor.execute("""
                     UPDATE semestre 
-                    SET data_inicio = ?, data_fim = ? 
+                    SET data_inicio = ?, data_fim = ?
                     WHERE id = ?
                 """, (data_inicio, data_fim, exists[0]))
             else:
