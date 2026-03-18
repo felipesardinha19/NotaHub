@@ -113,37 +113,50 @@ def render_logout():
 # =========================
 def render_app(materia_repo, aula_repo, frequencia_service,
                semestre_repo, usuario_id, usuario_nome):
-    from datetime import date
-
     # ----------------------------
     # Topo: saudação + logout + data + semestre
     # ----------------------------
     col1, col2, col3 = st.columns([6,3,3])
     with col1:
         st.title(f"📚 NotaHub - Olá, {usuario_nome}")
-    
-    # Data de hoje
     hoje = date.today()
     with col2:
         st.markdown(f"**Hoje:** {hoje.strftime('%d/%m/%Y')}")
-    
-    # Semestre obrigatório
-    semestre_atual = semestre_repo.obter_ativo(usuario_id)
-    if semestre_atual:
-        with col2:
-            st.markdown(f"**Semestre:** {semestre_atual.data_inicio} até {semestre_atual.data_fim}")
-    else:
+    # 🔥 SEMESTRE (REFATORADO)
+    semestre_atual = semestre_repo.obter_ultimo(usuario_id)
+    if not semestre_atual:
         st.warning("Você precisa cadastrar o semestre antes de prosseguir.")
         render_semestre_section(semestre_repo, usuario_id)
-        return  # Sai do render_app, só renderiza o semestre
-
-    # Coluna 3: botão de logout
+        return
+    # 🔥 CONVERSÃO DE DATA
+    inicio = date.fromisoformat(semestre_atual.data_inicio)
+    fim = date.fromisoformat(semestre_atual.data_fim)
+    # 🔥 FLAG PRINCIPAL DO SISTEMA
+    semestre_encerrado = hoje > fim
+    # 🔥 EXIBIÇÃO
+    with col2:
+        st.markdown(
+            f"**Semestre:** {semestre_atual.data_inicio} → {semestre_atual.data_fim}"
+        )
+        if semestre_encerrado:
+            st.error("🚨 Semestre encerrado")
+        else:
+            st.success("✅ Semestre em andamento")
+    # ----------------------------
+    # LOGOUT
+    # ----------------------------
     with col3:
         if st.button("Sair", key="btn_logout", use_container_width=True):
             st.session_state.clear()
             st.session_state["recarregar"] = True
-            st.rerun()  # Chama a função que já tem o botão com key única # Interrompe a execução para garantir que o usuário cadastre primeiro
-    
+            st.rerun()
+    # 🔥 AVISO GLOBAL (IMPORTANTE)
+    if semestre_encerrado:
+        st.warning("O semestre terminou. Cadastre um novo semestre para continuar.")
+
+    # ----------------------------
+    # ABAS
+    # ----------------------------
     abas = st.tabs([
         "📘 Cadastrar",
         "📝 Registrar Aula",
@@ -158,38 +171,46 @@ def render_app(materia_repo, aula_repo, frequencia_service,
     with abas[0]:
         st.header("Cadastrar Nova Matéria")
 
-        if st.session_state.get("materia_cadastrada"):
-            st.success("Matéria cadastrada com sucesso!")
-            del st.session_state["materia_cadastrada"]
+        if semestre_encerrado:
+            st.warning("Cadastro bloqueado. Semestre encerrado.")
+        else:
+            if st.session_state.get("materia_cadastrada"):
+                st.success("Matéria cadastrada com sucesso!")
+                del st.session_state["materia_cadastrada"]
 
-        with st.form("form_materia", clear_on_submit=True):
+            semestre_atual = semestre_repo.obter_ativo(usuario_id)
 
-            nome = st.text_input("Nome da Matéria")
-            carga_total = st.number_input("Carga Horária Total", min_value=1)
-            aulas_por_semana = st.number_input("Aulas por Semana", min_value=1)
-            horas_por_aula = st.number_input("Horas por Aula", min_value=1, max_value=4, step=1)
-            categoria = st.text_input("Categoria")
+            if not semestre_atual:
+                st.error("Cadastre um semestre antes de cadastrar matérias.")
+            else:
+                with st.form("form_materia", clear_on_submit=True):
+                    nome = st.text_input("Nome da Matéria")
+                    carga_total = st.number_input("Carga Horária Total", min_value=1)
+                    aulas_por_semana = st.number_input("Aulas por Semana", min_value=1)
+                    horas_por_aula = st.number_input("Horas por Aula", min_value=1, max_value=4, step=1)
+                    categoria = st.text_input("Categoria")
 
-            submitted = st.form_submit_button("Cadastrar")
+                    submitted = st.form_submit_button("Cadastrar")
 
-            if submitted:
-                if not nome.strip():
-                    st.error("O nome da matéria é obrigatório.")
-                    st.stop()
+                    if submitted:
+                        if not nome.strip():
+                            st.error("O nome da matéria é obrigatório.")
+                            st.stop()
 
-                materia = Materia(
-                    nome=nome.strip(),
-                    usuario_id=int(usuario_id),
-                    carga_total=float(carga_total),
-                    aulas_por_semana=int(aulas_por_semana),
-                    horas_por_aula=int(horas_por_aula),
-                    categoria=categoria.strip() if categoria else None
-                )
+                        materia = Materia(
+                            semestre_id=semestre_atual.id,  # 🔥 AQUI
+                            nome=nome.strip(),
+                            usuario_id=int(usuario_id),
+                            carga_total=float(carga_total),
+                            aulas_por_semana=int(aulas_por_semana),
+                            horas_por_aula=int(horas_por_aula),
+                            categoria=categoria.strip() if categoria else None
+                        )
 
-                materia_repo.inserir(materia, usuario_id)
+                        materia_repo.inserir(materia)
 
-                st.session_state["materia_cadastrada"] = True
-                st.rerun()
+                        st.session_state["materia_cadastrada"] = True
+                        st.rerun()
 
 # =========================================================
 # 📝 ABA 2 - REGISTRAR AULA (REFATORADO)
@@ -197,79 +218,85 @@ def render_app(materia_repo, aula_repo, frequencia_service,
     with abas[1]:
         st.header("Registrar Aula")
 
-        if st.session_state.get("aula_registrada"):
-            st.success("Aula registrada com sucesso!")
-            del st.session_state["aula_registrada"]
-
-        materias = materia_repo.listar(usuario_id)
-
-        if not materias:
-            st.info("Cadastre uma matéria primeiro.")
+        if semestre_encerrado:
+            st.warning("Cadastro bloqueado. Semestre encerrado.")
         else:
-            # 🔥 Seleção mais segura (sem índice)
-            materia_sel = st.selectbox(
-                "Selecione a Matéria",
-                materias,
-                format_func=lambda m: m.nome
-            )
+            if st.session_state.get("aula_registrada"):
+                st.success("Aula registrada com sucesso!")
+                del st.session_state["aula_registrada"]
 
-            # 🔥 Cálculo isolado por matéria
-            status = frequencia_service.calcular(materia_sel.id, usuario_id)
+            semestre_atual = semestre_repo.obter_ativo(usuario_id)
 
-            restante_para_carga = max(
-                (materia_sel.carga_total or 0) - status["horas_totais"], 0
-            )
-
-            # 🔒 BLOQUEIO FORA DO FORM (ESSENCIAL)
-            if restante_para_carga <= 0:
-                st.warning(
-                    f"Você já registrou todas as horas da matéria {materia_sel.nome} "
-                    f"({materia_sel.carga_total}h)."
-                )
+            if not semestre_atual:
+                st.error("Cadastre um semestre antes de registrar aulas.")
             else:
-                # ✅ FORM SÓ EXISTE SE PODE REGISTRAR
-                with st.form("form_aula", clear_on_submit=True):
+                materias = materia_repo.listar_por_semestre(usuario_id, semestre_atual.id)
 
-                    data = st.date_input("Data")
-
-                    max_horas = min(4, int(restante_para_carga))
-
-                    horas = st.number_input(
-                        "Horas",
-                        min_value=1,
-                        max_value=max_horas,
-                        step=1
+                if not materias:
+                    st.info("Cadastre uma matéria primeiro.")
+                else:
+                    materia_sel = st.selectbox(
+                        "Selecione a Matéria",
+                        materias,
+                        format_func=lambda m: m.nome
                     )
 
-                    status_aula = st.radio(
-                        "Status",
-                        ["Presente", "Ausente"],
-                        horizontal=True
+                    # 🔥 Frequência já usa semestre da matéria
+                    status = frequencia_service.calcular(materia_sel.id, usuario_id)
+
+                    restante_para_carga = max(
+                        (materia_sel.carga_total or 0) - status["horas_totais"], 0
                     )
 
-                    submitted = st.form_submit_button("Registrar")
-
-                    if submitted:
-                        # 🔁 Revalidação (boa prática)
-                        status = frequencia_service.calcular(materia_sel.id, usuario_id)
-                        restante_para_carga = max(
-                            (materia_sel.carga_total or 0) - status["horas_totais"], 0
+                    if restante_para_carga <= 0:
+                        st.warning(
+                            f"Você já registrou todas as horas da matéria {materia_sel.nome} "
+                            f"({materia_sel.carga_total}h)."
                         )
+                    else:
+                        with st.form("form_aula", clear_on_submit=True):
 
-                        if restante_para_carga <= 0:
-                            st.error("Essa matéria já atingiu a carga total.")
-                            st.stop()
+                            data = st.date_input("Data")
 
-                        aula_repo.inserir(
-                            usuario_id=usuario_id,
-                            materia_id=materia_sel.id,
-                            data=data,
-                            horas=horas,
-                            presente=1 if status_aula == "Presente" else 0
-                        )
+                            max_horas = min(4, int(restante_para_carga))
 
-                        st.session_state["aula_registrada"] = True
-                        st.rerun()
+                            horas = st.number_input(
+                                "Horas",
+                                min_value=1,
+                                max_value=max_horas,
+                                step=1
+                            )
+
+                            status_aula = st.radio(
+                                "Status",
+                                ["Presente", "Ausente"],
+                                horizontal=True
+                            )
+
+                            submitted = st.form_submit_button("Registrar")
+
+                            if submitted:
+                                # 🔁 Revalidação
+                                status = frequencia_service.calcular(materia_sel.id, usuario_id)
+                                restante_para_carga = max(
+                                    (materia_sel.carga_total or 0) - status["horas_totais"], 0
+                                )
+
+                                if restante_para_carga <= 0:
+                                    st.error("Essa matéria já atingiu a carga total.")
+                                    st.stop()
+
+                                aula_repo.inserir(
+                                    usuario_id=usuario_id,
+                                    materia_id=materia_sel.id,
+                                    semestre_id=semestre_atual.id,  # 🔥 AQUI
+                                    data=data,
+                                    horas=horas,
+                                    presente=1 if status_aula == "Presente" else 0
+                                )
+
+                                st.session_state["aula_registrada"] = True
+                                st.rerun()
                         
     # =========================================================
     # 📊 ABA 3 - RELATÓRIOS
@@ -277,59 +304,57 @@ def render_app(materia_repo, aula_repo, frequencia_service,
     with abas[2]:
         st.header("Relatórios")
 
-        materias = materia_repo.listar(usuario_id)
+        semestre_atual = semestre_repo.obter_ativo(usuario_id)
 
-        if not materias:
-            st.info("Nenhuma matéria cadastrada.")
+        if not semestre_atual:
+            st.warning("Nenhum semestre ativo. Cadastre um novo semestre.")
         else:
-            dados = []
+            materias = materia_repo.listar_por_semestre(usuario_id, semestre_atual.id)
 
-            for materia in materias:
-                resultado = frequencia_service.calcular(materia.id, usuario_id)
+            if not materias:
+                st.info("Nenhuma matéria cadastrada.")
+            else:
+                dados = []
+                for materia in materias:
+                    resultado = frequencia_service.calcular(materia.id, usuario_id)
 
-                st.subheader(materia.nome)
-                st.write(f"Carga Total: {int(materia.carga_total or 0)}h")
-                st.write(f"Frequência: {int(resultado.get('frequencia') or 0)}%")
-                st.write(f"Horas de presença: {int(resultado.get('horas_presentes') or 0)}h")
-                st.write(f"Horas já faltadas: {int(resultado.get('horas_faltadas') or 0)}h")
-                st.write(f"Você ainda pode faltar: {int(resultado.get('horas_restantes') or 0)}h")
+                    st.subheader(materia.nome)
+                    st.write(f"Carga Total: {int(materia.carga_total or 0)}h")
+                    st.write(f"Frequência: {int(resultado.get('frequencia') or 0)}%")
+                    st.write(f"Horas de presença: {int(resultado.get('horas_presentes') or 0)}h")
+                    st.write(f"Horas já faltadas: {int(resultado.get('horas_faltadas') or 0)}h")
+                    st.write(f"Você ainda pode faltar: {int(resultado.get('horas_restantes') or 0)}h")
 
-                status = resultado["status"]
+                    status = resultado["status"]
 
-                if "Reprovado" in status:
-                    st.error(status)
-                elif "risco" in status.lower():
-                    st.warning(status)
-                elif status == "OK":
-                    st.success(status)
-                else:
-                    st.info(status)
+                    # 🔹 Exibição com cores coerentes
+                    if "Reprovado" in status:
+                        st.error(status)  # vermelho
+                    elif "risco" in status.lower():
+                        st.warning(status)  # amarelo
+                    elif "OK" in status:
+                        st.info(status)  # azul, aluno dentro do limite
+                    elif "Aprovado" in status or "Encerrado" in status:
+                        st.success(status)  # verde
+                    else:
+                        st.info(status)  # fallback azul neutro
 
-                st.divider()
+                    st.divider()
 
-                dados.append({
-                    "Materia": materia.nome,
-                    "Frequencia": resultado["frequencia"]
-                })
+                    dados.append({
+                        "Materia": materia.nome,
+                        "Frequencia": resultado["frequencia"]
+                    })
 
-            # ---------- GRÁFICO ----------
-            st.header("Gráfico de Frequência")
+                df = pd.DataFrame(dados)
 
-            df = pd.DataFrame(dados)
+                chart = alt.Chart(df).mark_bar().encode(
+                    x=alt.X("Materia:N", sort=None, axis=alt.Axis(labelAngle=-45)),
+                    y="Frequencia:Q",
+                    tooltip=["Materia", "Frequencia"]
+                )
 
-            chart = alt.Chart(df).mark_bar().encode(
-                x=alt.X(
-                    "Materia:N",
-                    sort=None,
-                    axis=alt.Axis(labelAngle=-45, title="Matéria")
-                ),
-                y=alt.Y("Frequencia:Q", title="Frequência %"),
-                tooltip=["Materia", "Frequencia"]
-            ).properties(
-                height=400
-            )
-
-            st.altair_chart(chart, use_container_width=True)
+                st.altair_chart(chart, use_container_width=True)
 
     # =========================================================
     # 📃 ABA 4 - LISTAGEM
@@ -337,14 +362,19 @@ def render_app(materia_repo, aula_repo, frequencia_service,
     with abas[3]:
         st.header("Matérias Cadastradas")
 
-        materias = materia_repo.listar(usuario_id)
+        semestre_atual = semestre_repo.obter_ativo(usuario_id)
 
-        if not materias:
-            st.info("Nenhuma matéria cadastrada.")
+        if not semestre_atual:
+            st.warning("Nenhum semestre ativo. Cadastre um novo semestre.")
         else:
-            for materia in materias:
-                st.write(f"📘 {materia.nome} ({materia.carga_total}h)")
-                st.divider()
+            materias = materia_repo.listar_por_semestre(usuario_id, semestre_atual.id)
+
+            if not materias:
+                st.info("Nenhuma matéria cadastrada.")
+            else:
+                for materia in materias:
+                    st.write(f"📘 {materia.nome} ({materia.carga_total}h)")
+                    st.divider()
 
 # =========================================================
 # ⚙️ ABA 5 - CONFIGURAÇÕES
@@ -356,7 +386,7 @@ def render_app(materia_repo, aula_repo, frequencia_service,
         st.divider()
         
         # ⚠️ Passando DB_PATH corretamente
-        render_delete_section(materia_repo, usuario_id, DB_PATH)
+        render_delete_section(materia_repo, semestre_repo, usuario_id, DB_PATH)
         st.divider()
 
         # 💾 Seção Backup

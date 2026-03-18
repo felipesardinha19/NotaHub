@@ -5,30 +5,27 @@ class StatusService:
         frequencia: float,
         horas_registradas: float,
         carga_total: float,
-        horas_restantes: float
+        horas_faltadas: float
     ) -> str:
 
-        semestre_em_andamento = horas_registradas < carga_total
+        encerrado = horas_registradas >= carga_total
+        horas_max_faltas = carga_total * 0.30
 
-        # 🔴 Já não pode mais faltar (limite atingido ou ultrapassado)
-        # Se sua regra usa max(0, ...), horas_restantes nunca será negativa,
-        # então considerar == 0 resolve.
-        if horas_restantes == 0:
-            if semestre_em_andamento:
-                return "Semestre em andamento: limite de faltas excedido"
-            else:
-                return "Reprovado"
+        # 🔴 Reprovado
+        if horas_faltadas > horas_max_faltas:
+            return "Reprovado por falta (Encerrado)" if encerrado else "Reprovado"
 
-        # 🟡 Próximo do limite (alerta de 10% da carga total)
-        if semestre_em_andamento and horas_restantes <= carga_total * 0.10:
-            return "Semestre em andamento: risco de reprovação"
+        # 🟡 Limite atingido (não pode mais faltar)
+        if horas_faltadas == horas_max_faltas and not encerrado:
+            return "Em risco (limite de faltas atingido)"
 
-        # 🔵 Semestre ainda em andamento sem risco
-        if semestre_em_andamento:
-            return "Semestre em andamento"
+        # 🟡 Próximo do limite
+        if not encerrado and horas_faltadas >= horas_max_faltas * 0.8:
+            return "Em risco (próximo do limite)"
 
-        # 🟢 Semestre terminou, avalia aprovação final
-        if frequencia >= 75:
-            return "OK"
-        else:
-            return "Reprovado"
+        # 🔵 Em andamento
+        if not encerrado:
+            return "OK - Semestre em andamento"
+
+        # 🟢 Encerrado aprovado
+        return "Aprovado (Encerrado)"

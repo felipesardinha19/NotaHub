@@ -5,6 +5,7 @@ from datetime import datetime
 class Aula:
     usuario_id: int
     materia_id: int
+    semestre_id: int
     data: str
     horas: int
     presente: int

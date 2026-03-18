@@ -36,6 +36,7 @@ def create_tables():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT NOT NULL,
         usuario_id INTEGER NOT NULL,
+        semestre_id INTEGER NOT NULL,
         carga_total REAL NOT NULL CHECK (carga_total > 0),
         aulas_por_semana INTEGER NOT NULL CHECK (aulas_por_semana > 0),
         horas_por_aula INTEGER NOT NULL CHECK (horas_por_aula BETWEEN 1 AND 4),
@@ -48,6 +49,7 @@ def create_tables():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         materia_id INTEGER NOT NULL,
         usuario_id INTEGER NOT NULL,
+        semestre_id INTEGER NOT NULL,
         data TEXT NOT NULL,
         horas INTEGER NOT NULL CHECK (horas BETWEEN 1 and 4),
         presente INTEGER NOT NULL CHECK (presente IN (0,1)),
@@ -57,7 +59,7 @@ def create_tables():
     
     cursor.execute(
         """
-    CREATE TABLE IF NOT EXISTS Usuarios (
+    CREATE TABLE IF NOT EXISTS usuarios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL,
             email TEXT NOT NULL UNIQUE,

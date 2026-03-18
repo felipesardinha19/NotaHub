@@ -9,18 +9,19 @@ class MateriaRepository:
         self.db_path = db_path
 
 
-    def inserir(self, materia: Materia, usuario_id: int) -> None:
+    def inserir(self, materia: Materia) -> None:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
                 INSERT INTO materias 
-                (nome, usuario_id, carga_total, aulas_por_semana, horas_por_aula, categoria)
-                VALUES (?, ?, ?, ?, ?, ?)
+                (nome, usuario_id, semestre_id, carga_total, aulas_por_semana, horas_por_aula, categoria)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     materia.nome,
-                    usuario_id,
+                    materia.usuario_id,
+                    materia.semestre_id,  # 🔥 NOVO
                     materia.carga_total,
                     materia.aulas_por_semana,
                     materia.horas_por_aula,
@@ -30,17 +31,17 @@ class MateriaRepository:
             conn.commit()
 
 
-    def listar(self, usuario_id: int) -> List[Materia]:
+    def listar_por_semestre(self, usuario_id: int, semestre_id: int) -> List[Materia]:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT id, nome, usuario_id, carga_total, aulas_por_semana,
-                       horas_por_aula, categoria, created_at
+                SELECT id, nome, usuario_id, semestre_id, carga_total, aulas_por_semana,
+                    horas_por_aula, categoria, created_at
                 FROM materias
-                WHERE usuario_id = ?
+                WHERE usuario_id = ? AND semestre_id = ?
                 """,
-                (usuario_id,)
+                (usuario_id, semestre_id)
             )
             rows = cursor.fetchall()
 
@@ -49,11 +50,12 @@ class MateriaRepository:
                 id=row[0],
                 nome=row[1],
                 usuario_id=row[2],
-                carga_total=row[3],
-                aulas_por_semana=row[4],
-                horas_por_aula=row[5],
-                categoria=row[6],
-                created_at=row[7]
+                semestre_id=row[3],  # 🔥 NOVO
+                carga_total=row[4],
+                aulas_por_semana=row[5],
+                horas_por_aula=row[6],
+                categoria=row[7],
+                created_at=row[8]
             )
             for row in rows
         ]
@@ -64,8 +66,8 @@ class MateriaRepository:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT id, nome, usuario_id, carga_total, aulas_por_semana,
-                       horas_por_aula, categoria, created_at
+                SELECT id, nome, usuario_id, semestre_id, carga_total, aulas_por_semana,
+                    horas_por_aula, categoria, created_at
                 FROM materias
                 WHERE id = ? AND usuario_id = ?
                 """,
@@ -78,11 +80,12 @@ class MateriaRepository:
                 id=row[0],
                 nome=row[1],
                 usuario_id=row[2],
-                carga_total=row[3],
-                aulas_por_semana=row[4],
-                horas_por_aula=row[5],
-                categoria=row[6],
-                created_at=row[7]
+                semestre_id=row[3],  # 🔥 NOVO
+                carga_total=row[4],
+                aulas_por_semana=row[5],
+                horas_por_aula=row[6],
+                categoria=row[7],
+                created_at=row[8]
             )
         return None
 

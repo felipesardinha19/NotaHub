@@ -8,49 +8,53 @@ class AulaRepository:
         self.db_path = db_path
 
     # CREATE
-    def inserir(self, usuario_id: int, materia_id: int, data: str, horas: int, presente: int) -> None:
+    def inserir(self, usuario_id: int, materia_id: int, semestre_id: int, data: str, horas: int, presente: int) -> None:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO aulas (usuario_id, materia_id, data, horas, presente)
-                VALUES (?, ?, ?, ?, ?)
-            """, (usuario_id, materia_id, data, horas, presente))
+                INSERT INTO aulas (usuario_id, materia_id, semestre_id, data, horas, presente)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (usuario_id, materia_id, semestre_id, data, horas, presente))
             conn.commit()
 
     # SOMA HORAS
-    def somar_horas(self, usuario_id: int, materia_id: int) -> int:
+    def somar_horas(self, usuario_id: int, materia_id: int, semestre_id: int) -> int:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT SUM(horas)
                 FROM aulas
-                WHERE usuario_id = ? AND materia_id = ?
-            """, (usuario_id, materia_id))
+                WHERE usuario_id = ?
+                AND materia_id = ?
+                AND semestre_id = ?
+            """, (usuario_id, materia_id, semestre_id))
             result = cursor.fetchone()
             return result[0] if result[0] else 0
 
     # READ
-    def listar_por_materia(self, usuario_id: int, materia_id: int) -> list[Aula]:
+    def listar_por_materia(self, usuario_id: int, materia_id: int, semestre_id: int) -> list[Aula]:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, usuario_id, materia_id, data, horas, presente, created_at
+                SELECT id, usuario_id, materia_id, semestre_id, data, horas, presente, created_at
                 FROM aulas
                 WHERE materia_id = ?
                 AND usuario_id = ?
+                AND semestre_id = ?
                 ORDER BY data ASC
-            """, (materia_id, usuario_id))
+            """, (materia_id, usuario_id, semestre_id))
             rows = cursor.fetchall()
 
         return [
             Aula(
                 usuario_id=row[1],
                 materia_id=row[2],
-                data=row[3],
-                horas=int(row[4]),
-                presente=row[5],
+                semestre_id=row[3],  # 🔥 NOVO
+                data=row[4],
+                horas=int(row[5]),
+                presente=row[6],
                 id=row[0],
-                created_at=row[6]
+                created_at=row[7]
             )
             for row in rows
         ]

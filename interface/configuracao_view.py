@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 import datetime
+from app.models import semestre
 from app.services.backup_services import (
     exportar_relatorio_csv,
     exportar_relatorio_json,
@@ -65,34 +66,59 @@ def render_backup_section(db_path: str, usuario_id: int, materia_repo, frequenci
 # ==========================
 # EXCLUSÃO DE MATÉRIAS
 # ==========================
-def render_delete_section(materia_repo, usuario_id, db_path: str):
+def render_delete_section(materia_repo, semestre_repo, usuario_id, db_path: str):
     st.subheader("🗑️ Excluir Matérias")
+
+    # ----------------------------
+    # Feedback de sucesso
+    # ----------------------------
     if st.session_state.get("materia_deletada"):
         st.success("Matéria deletada com sucesso!")
         del st.session_state["materia_deletada"]
-        
-    materias = materia_repo.listar(usuario_id)
+
+    # ----------------------------
+    # 🔥 SEMESTRE (COM FALLBACK)
+    # ----------------------------
+    semestre = semestre_repo.obter_ativo(usuario_id)
+
+    if not semestre:
+        semestre = semestre_repo.obter_ultimo(usuario_id)
+
+        if not semestre:
+            st.warning("Nenhum semestre encontrado.")
+            return
+
+        st.info("Exibindo matérias do último semestre (encerrado).")
+
+    # ----------------------------
+    # 📘 MATÉRIAS
+    # ----------------------------
+    materias = materia_repo.listar_por_semestre(usuario_id, semestre.id)
 
     if not materias:
         st.info("Nenhuma matéria cadastrada.")
         return
 
+    # ----------------------------
+    # 🗑️ LISTAGEM + DELETE
+    # ----------------------------
     for materia in materias:
         col1, col2 = st.columns([4, 1])
 
         with col1:
-            st.write(f"📘 {materia.nome} ({int(materia.carga_total)}h)")
+            st.write(f"📘 {materia.nome} ({int(materia.carga_total or 0)}h)")
 
         with col2:
             if st.button("Excluir", key=f"del_{materia.id}"):
-                # 🔐 Backup automático antes de deletar
+
+                # 🔐 Backup automático
                 try:
-                    caminho_backup = backup_database(db_path)
+                    backup_database(db_path)
                 except Exception as e:
                     st.error(f"Falha ao criar backup. Exclusão cancelada.\n{e}")
-                    st.stop()  # Para evitar deletar sem backup
+                    st.stop()
 
-                # 🗑 Deleta a matéria
+                # 🗑 Exclusão
                 materia_repo.deletar(materia.id)
 
                 st.session_state["materia_deletada"] = True
