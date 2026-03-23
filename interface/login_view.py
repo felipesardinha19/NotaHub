@@ -4,7 +4,7 @@ from app.services.auth_service import autenticar
 
 def render_login(usuario_repo):
 
-    st.title("🔐 Login - NotaHub")
+    st.title("🔐 Login - FaltaZero")
 
     email = st.text_input("Email")
     senha = st.text_input("Senha", type="password")

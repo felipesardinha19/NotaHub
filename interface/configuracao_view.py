@@ -11,7 +11,7 @@ from app.services.backup_services import (
 # ==========================
 # BACKUP & EXPORTAÇÃO
 # ==========================
-def render_backup_section(db_path: str, usuario_id: int, materia_repo, frequencia_service):
+def render_backup_section(db_path: str, usuario_id: int, materia_repo, frequencia_service, semestre_repo):
     st.subheader("💾 Backup e Exportação")
     col1, col2, col3 = st.columns(3)
 
@@ -24,7 +24,7 @@ def render_backup_section(db_path: str, usuario_id: int, materia_repo, frequenci
                     st.download_button(
                         label="Baixar Backup",
                         data=f,
-                        file_name="notahub_backup.db",
+                        file_name="faltazero_backup.db",
                         mime="application/octet-stream",
                         use_container_width=True
                     )
@@ -34,13 +34,13 @@ def render_backup_section(db_path: str, usuario_id: int, materia_repo, frequenci
     # ---------- EXPORTAR CSV ----------
     with col2:
         if st.button("Gerar CSV", use_container_width=True):
-            caminho = exportar_relatorio_csv(usuario_id, materia_repo, frequencia_service)
+            caminho = exportar_relatorio_csv(usuario_id, materia_repo, frequencia_service, semestre_repo)
             if caminho and os.path.exists(caminho):
                 with open(caminho, "rb") as f:
                     st.download_button(
                         label="Baixar CSV",
                         data=f,
-                        file_name="relatorio_notahub.csv",
+                        file_name="relatorio_faltazero.csv",
                         mime="text/csv",
                         use_container_width=True
                     )
@@ -50,13 +50,13 @@ def render_backup_section(db_path: str, usuario_id: int, materia_repo, frequenci
     # ---------- EXPORTAR JSON ----------
     with col3:
         if st.button("Gerar JSON", use_container_width=True):
-            caminho = exportar_relatorio_json(usuario_id, materia_repo, frequencia_service)
+            caminho = exportar_relatorio_json(usuario_id, materia_repo, frequencia_service, semestre_repo)
             if caminho and os.path.exists(caminho):
                 with open(caminho, "rb") as f:
                     st.download_button(
                         label="Baixar JSON",
                         data=f,
-                        file_name="relatorio_notahub.json",
+                        file_name="relatorio_faltazero.json",
                         mime="application/json",
                         use_container_width=True
                     )
@@ -77,7 +77,7 @@ def render_delete_section(materia_repo, semestre_repo, usuario_id, db_path: str)
         del st.session_state["materia_deletada"]
 
     # ----------------------------
-    # 🔥 SEMESTRE (COM FALLBACK)
+    # SEMESTRE (COM FALLBACK)
     # ----------------------------
     semestre = semestre_repo.obter_ativo(usuario_id)
 

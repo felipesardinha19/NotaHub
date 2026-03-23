@@ -21,7 +21,7 @@ class MateriaRepository:
                 (
                     materia.nome,
                     materia.usuario_id,
-                    materia.semestre_id,  # 🔥 NOVO
+                    materia.semestre_id,  
                     materia.carga_total,
                     materia.aulas_por_semana,
                     materia.horas_por_aula,
@@ -50,7 +50,7 @@ class MateriaRepository:
                 id=row[0],
                 nome=row[1],
                 usuario_id=row[2],
-                semestre_id=row[3],  # 🔥 NOVO
+                semestre_id=row[3], 
                 carga_total=row[4],
                 aulas_por_semana=row[5],
                 horas_por_aula=row[6],
@@ -80,7 +80,7 @@ class MateriaRepository:
                 id=row[0],
                 nome=row[1],
                 usuario_id=row[2],
-                semestre_id=row[3],  # 🔥 NOVO
+                semestre_id=row[3],  
                 carga_total=row[4],
                 aulas_por_semana=row[5],
                 horas_por_aula=row[6],

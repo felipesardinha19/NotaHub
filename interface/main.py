@@ -38,8 +38,8 @@ from interface.configuracao_view import (
 # =========================
 # Configurações iniciais
 # =========================
-st.set_page_config(page_title="NotaHub", page_icon="📚")
-DB_PATH = "data/notahub.db"
+st.set_page_config(page_title="FaltaZero", page_icon="📚")
+DB_PATH = "data/faltazero.db"
 
 # =========================
 # INIT DATABASE & SERVICES
@@ -63,7 +63,7 @@ def init_services():
 # AUTENTICAÇÃO (LOGIN/REGISTRO)
 # =========================
 def render_auth(auth_service):
-    st.title("🔐 NotaHub")
+    st.title("🔐 FaltaZero")
 
     aba_login, aba_registro = st.tabs(["Login", "Criar Conta"])
 
@@ -118,22 +118,22 @@ def render_app(materia_repo, aula_repo, frequencia_service,
     # ----------------------------
     col1, col2, col3 = st.columns([6,3,3])
     with col1:
-        st.title(f"📚 NotaHub - Olá, {usuario_nome}")
+        st.title(f"📚 FaltaZero - Olá, {usuario_nome}")
     hoje = date.today()
     with col2:
         st.markdown(f"**Hoje:** {hoje.strftime('%d/%m/%Y')}")
-    # 🔥 SEMESTRE (REFATORADO)
+    
     semestre_atual = semestre_repo.obter_ultimo(usuario_id)
     if not semestre_atual:
         st.warning("Você precisa cadastrar o semestre antes de prosseguir.")
         render_semestre_section(semestre_repo, usuario_id)
         return
-    # 🔥 CONVERSÃO DE DATA
+    
     inicio = date.fromisoformat(semestre_atual.data_inicio)
     fim = date.fromisoformat(semestre_atual.data_fim)
-    # 🔥 FLAG PRINCIPAL DO SISTEMA
+    
     semestre_encerrado = hoje > fim
-    # 🔥 EXIBIÇÃO
+    
     with col2:
         st.markdown(
             f"**Semestre:** {semestre_atual.data_inicio} → {semestre_atual.data_fim}"
@@ -150,7 +150,7 @@ def render_app(materia_repo, aula_repo, frequencia_service,
             st.session_state.clear()
             st.session_state["recarregar"] = True
             st.rerun()
-    # 🔥 AVISO GLOBAL (IMPORTANTE)
+    
     if semestre_encerrado:
         st.warning("O semestre terminou. Cadastre um novo semestre para continuar.")
 
@@ -199,7 +199,7 @@ def render_app(materia_repo, aula_repo, frequencia_service,
                             st.stop()
 
                         materia = Materia(
-                            semestre_id=semestre_atual.id,  # 🔥 AQUI
+                            semestre_id=semestre_atual.id,
                             nome=nome.strip(),
                             usuario_id=int(usuario_id),
                             carga_total=float(carga_total),
@@ -242,7 +242,7 @@ def render_app(materia_repo, aula_repo, frequencia_service,
                         format_func=lambda m: m.nome
                     )
 
-                    # 🔥 Frequência já usa semestre da matéria
+                    
                     status = frequencia_service.calcular(materia_sel.id, usuario_id)
                     restante_para_carga = max(
                         (materia_sel.carga_total or 0) - status["horas_totais"], 0
@@ -261,7 +261,7 @@ def render_app(materia_repo, aula_repo, frequencia_service,
                         with st.form("form_aula", clear_on_submit=True):
                             data = st.date_input(
                                 "Data",
-                                max_value=date.today(),  # 🔒 não permite datas futuras
+                                max_value=date.today(),  
                             )
                             max_horas = min(4, int(restante_para_carga))
                             horas = st.number_input("Horas", min_value=1, max_value=max_horas, step=1)
@@ -424,7 +424,7 @@ def render_app(materia_repo, aula_repo, frequencia_service,
         render_semestre_section(semestre_repo, usuario_id)
         st.divider()
         
-        # ⚠️ Passando DB_PATH corretamente
+        
         render_delete_section(materia_repo, semestre_repo, usuario_id, DB_PATH)
         st.divider()
 
@@ -433,12 +433,13 @@ def render_app(materia_repo, aula_repo, frequencia_service,
             DB_PATH,
             usuario_id,
             materia_repo,
-            frequencia_service
+            frequencia_service,
+            semestre_repo
         )
 # =========================================================
 # ⚙️ ABA 6 - Semestre
 # =========================================================
-    with abas[5]:  # índice 5 = nova aba
+    with abas[5]:  
         st.header("📂 Histórico de Semestres")
 
         st.warning("Aguarde nova atualização")

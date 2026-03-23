@@ -3,7 +3,7 @@ import csv
 import json
 import sqlite3
 from datetime import datetime
-
+from app.repositories.semestre_repository import SemestreRepository
 
 # ===============================
 # 1️⃣ Backup completo do banco (.db)
@@ -22,7 +22,7 @@ def backup_database(db_path: str) -> str:
     backup_dir = "data/backups"
     os.makedirs(backup_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_path = os.path.join(backup_dir, f"notahub_backup_{timestamp}.db")
+    backup_path = os.path.join(backup_dir, f"faltazero_backup_{timestamp}.db")
 
     # Cria conexão para o backup
     backup_conn = sqlite3.connect(backup_path)
@@ -39,13 +39,13 @@ def backup_database(db_path: str) -> str:
 # ===============================
 # 2️⃣ Exportar relatório em CSV
 # ===============================
-def exportar_relatorio_csv(usuario_id, materia_repo, frequencia_service, pasta_backup="backups") -> str:
+def exportar_relatorio_csv(usuario_id, materia_repo, frequencia_service, semestre_repo, pasta_backup="backups") -> str:
     os.makedirs(pasta_backup, exist_ok=True)
 
     data = datetime.now().strftime("%Y%m%d_%H%M%S")
-    caminho = os.path.join(pasta_backup, f"relatorio_notahub_{data}.csv")
-
-    materias = materia_repo.listar(usuario_id)
+    caminho = os.path.join(pasta_backup, f"relatorio_faltazero_{data}.csv")
+    semestre_atual = semestre_repo.obter_ativo(usuario_id)
+    materias = materia_repo.listar_por_semestre(usuario_id,semestre_atual.id)
 
     with open(caminho, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -80,13 +80,13 @@ def exportar_relatorio_csv(usuario_id, materia_repo, frequencia_service, pasta_b
 # ===============================
 # 3️⃣ Backup técnico em JSON
 # ===============================
-def exportar_relatorio_json(usuario_id, materia_repo, frequencia_service, pasta_backup="backups") -> str:
+def exportar_relatorio_json(usuario_id, materia_repo, frequencia_service, semestre_repo, pasta_backup="backups") -> str:
     os.makedirs(pasta_backup, exist_ok=True)
 
     data = datetime.now().strftime("%Y%m%d_%H%M%S")
-    caminho = os.path.join(pasta_backup, f"relatorio_notahub_{data}.json")
-
-    materias = materia_repo.listar(usuario_id)
+    caminho = os.path.join(pasta_backup, f"relatorio_faltazero_{data}.json")
+    semestre_atual = semestre_repo.obter_ativo(usuario_id)
+    materias = materia_repo.listar_por_semestre(usuario_id,semestre_atual.id)
     dados = []
 
     for materia in materias:

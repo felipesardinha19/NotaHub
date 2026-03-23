@@ -1,4 +1,4 @@
-# 📚 NotaHub
+# 📚 FaltaZero
 
 Aplicação para estudantes que permite **controlar faltas por carga horária** e acompanhar o risco de reprovação em disciplinas.
 
@@ -10,7 +10,7 @@ O sistema calcula automaticamente a **frequência do aluno** com base nas horas 
 
 Muitos estudantes têm dificuldade em acompanhar quantas faltas ainda podem ter antes de reprovar por frequência.
 
-O **NotaHub** resolve isso calculando automaticamente:
+O **FaltaZero** resolve isso calculando automaticamente:
 
 - frequência atual
 - horas faltadas
@@ -35,7 +35,7 @@ Com base em uma pesquisa que fiz com estudantes da USP de Ribeirão Preto, a pre
 - **70% de presença**
 - **30% máximo de faltas**
 
-O NotaHub utiliza essas regras para calcular automaticamente a situação do aluno.
+O FaltaZero utiliza essas regras para calcular automaticamente a situação do aluno.
 
 ### Exemplo
 

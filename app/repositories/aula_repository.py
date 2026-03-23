@@ -49,7 +49,7 @@ class AulaRepository:
             Aula(
                 usuario_id=row[1],
                 materia_id=row[2],
-                semestre_id=row[3],  # 🔥 NOVO
+                semestre_id=row[3],
                 data=row[4],
                 horas=int(row[5]),
                 presente=row[6],

@@ -11,7 +11,7 @@ Cria/usa o arquivo notahub.db
 Isso evita usar caminho fixo tipo "../data/notahub.db".
 É mais profissional."""
 
-DB_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "notahub.db"
+DB_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "faltazero.db"
 
 
 """Por que isso é importante?
